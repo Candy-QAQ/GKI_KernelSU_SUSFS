@@ -262,8 +262,20 @@ jobs:
             curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash $BRANCH
           fi
 
+      - name: 修复 SukiSU sulog 编译兼容性
+        if: ${{ inputs.kernelsu_variant == 'SukiSU' }}
+        run: |
+          KSU_EVENT_C="$CONFIG/common/drivers/kernelsu/sulog/event.c"
+          if [ -f "$KSU_EVENT_C" ] && grep -q 'USER_ARG_NULL' "$KSU_EVENT_C"; then
+            echo "修复 SukiSU sulog USER_ARG_NULL 参数类型不匹配"
+            sed -i 's/NULL, USER_ARG_NULL, gfp/NULL, NULL, gfp/' "$KSU_EVENT_C"
+            grep -n 'ksu_sulog_capture(KSU_SULOG_EVENT_IOCTL_GRANT_ROOT' "$KSU_EVENT_C"
+          else
+            echo "未检测到需要修复的 SukiSU sulog 代码"
+          fi
+
       - name: 添加 Baseband-guard 支持
-        if: ${{ github.event.inputs.BBG == 'true' }}
+        if: ${{ inputs.BBG }}
         run: |
           echo "更改为配置目录: $CONFIG..."
           cd "$CONFIG/common"
